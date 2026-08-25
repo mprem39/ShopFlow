@@ -1,5 +1,10 @@
-﻿namespace ShopFlow.Api.Contracts.Products;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ShopFlow.Api.Contracts.Products;
 
 public sealed record UpdateProductRequest(
+    [StringLength(20)]
     string Name,
-    decimal Price);
+    [Range(0,100000)]
+    decimal Price
+    );
