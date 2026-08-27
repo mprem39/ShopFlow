@@ -1,7 +1,19 @@
+using Microsoft.EntityFrameworkCore;
+using ShopFlow.Api.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
+
+builder.Services.AddDbContext<ShopFlowDbContext>(options =>
+{
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("Database"));
+
+    options.EnableDetailedErrors();
+    options.EnableSensitiveDataLogging();
+});
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

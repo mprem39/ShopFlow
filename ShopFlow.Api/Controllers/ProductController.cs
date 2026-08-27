@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ShopFlow.Api.Contracts.Products;
-using ShopFlow.Api.Models;
+using ShopFlow.Api.Data;
 
 namespace ShopFlow.Api.Controllers;
 
@@ -8,62 +9,55 @@ namespace ShopFlow.Api.Controllers;
 [Route("api/products")]
 public class ProductsController : ControllerBase
 {
-    private static readonly List<Product> _products = new List<Product>
-        {
-            new Product
-            {
-                Id = Guid.Parse("73cc57fb-d9ad-4be9-a01f-1d7a48ab1c48"),
-                Name = "Mechanical Keyboard",
-                Price = 4999
-            },
-            new Product
-            {
-                Id = Guid.Parse("73cc57fb-d9ad-4be9-a01f-1d7a48ab1c49"),
-                Name = "Wireless Mouse",
-                Price = 2499
-            }
-        };
+    private readonly ShopFlowDbContext _dbContext;
+    public ProductsController(ShopFlowDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
 
     [HttpGet]
-    public IActionResult GetProducts()
+    public async Task<IActionResult> GetProducts()
     {
-        var products = _products
+
+        var products = await _dbContext.Products
+            .AsNoTracking()
             .Select(product => new ProductResponse(
                 product.Id,
                 product.Name,
                 product.Price))
-            .ToArray();
+            .ToListAsync();
 
         return Ok(products);
     }
-
     [HttpGet("{id:guid}")]
-    public IActionResult GetProduct(Guid id)
+    public async Task<IActionResult> GetProduct(Guid id)
     {
-        var product = _products.FirstOrDefault(p => p.Id == id);
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new ProductResponse(
+                p.Id,
+                p.Name,
+                p.Price))
+            .FirstOrDefaultAsync();
+
         if (product is null)
         {
             return NotFound();
         }
-       var response = new ProductResponse(
-       product.Id,
-       product.Name,
-       product.Price);
-        return Ok(response);
+
+        return Ok(product);
     }
 
     [HttpPost]
-    public IActionResult CreateProduct(CreateProductRequest request)
+    public async Task<IActionResult> CreateProduct(CreateProductRequest request)
     {
-        var product = new Product
-        {
-            Id = Guid.NewGuid(),
-            Name = request.Name,
-            Price = request.Price
-        };
-        _products.Add(product);
-        // For now, we're not persisting it.
-
+        var product = new Product(
+        request.Name,
+        request.Price);
+        _dbContext.Products.Add(product);
+        await _dbContext.SaveChangesAsync();
         var response = new ProductResponse(
             product.Id,
             product.Name,
@@ -75,45 +69,40 @@ public class ProductsController : ControllerBase
             response);
     }
 
-
     [HttpPut("{id:guid}")]
-    public IActionResult UpdateProduct(Guid id,UpdateProductRequest updateProductRequest)
+    public async Task<IActionResult> UpdateProduct(
+        Guid id,
+        UpdateProductRequest request)
     {
-        var product = _products.FirstOrDefault(p => p.Id == id);
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (product is null)
         {
             return NotFound();
         }
-        _products.Remove(product);
 
-        var updateProduct = new Product
-        {
-            Id = id,
-            Name = updateProductRequest.Name,
-            Price = updateProductRequest.Price
-        };
+        product.Update(
+            request.Name,
+            request.Price);
 
-        // For now, we're not persisting it.
-        _products.Add(updateProduct);
-       
+        await _dbContext.SaveChangesAsync();
+
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
-    public IActionResult DeleteProduct(Guid id)
+    public async Task<IActionResult> DeleteProduct(Guid id)
     {
-        var product = _products.FirstOrDefault(p => p.Id == id);
+        var product = await _dbContext.Products.FirstOrDefaultAsync(p => p.Id == id);
         if (product is null)
         {
             return NotFound();
         }
-        _products.Remove(product);
+        _dbContext.Products.Remove(product);
+        await _dbContext.SaveChangesAsync();
         return NoContent();
     }
 
-    [HttpGet("test-error")]
-    public IActionResult TestError()
-    {
-        throw new InvalidOperationException("This is a test exception.");
-    }
+
 }
