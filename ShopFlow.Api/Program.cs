@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using ShopFlow.Api.Data;
+using ShopFlow.Api.Persistence;
+using ShopFlow.Api.Persistence.Repositories;
+using ShopFlow.Api.Services;
+using ShopFlow.Api.Services.Products;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +17,8 @@ builder.Services.AddDbContext<ShopFlowDbContext>(options =>
     options.EnableDetailedErrors();
     options.EnableSensitiveDataLogging();
 });
-
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IProductService, ProductService>();
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();

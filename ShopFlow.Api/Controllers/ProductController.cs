@@ -1,46 +1,33 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ShopFlow.Api.Contracts.Products;
-using ShopFlow.Api.Data;
+using ShopFlow.Api.Services;
+using ShopFlow.Api.Services.Products;
 
 namespace ShopFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/products")]
-public class ProductsController : ControllerBase
+public sealed class ProductsController : ControllerBase
 {
-    private readonly ShopFlowDbContext _dbContext;
-    public ProductsController(ShopFlowDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    private readonly IProductService _productService;
 
+    public ProductsController(IProductService productService)
+    {
+        _productService = productService;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetProducts()
     {
-
-        var products = await _dbContext.Products
-            .AsNoTracking()
-            .Select(product => new ProductResponse(
-                product.Id,
-                product.Name,
-                product.Price))
-            .ToListAsync();
+        var products = await _productService.GetProductsAsync();
 
         return Ok(products);
     }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetProduct(Guid id)
     {
-        var product = await _dbContext.Products
-            .AsNoTracking()
-            .Where(p => p.Id == id)
-            .Select(p => new ProductResponse(
-                p.Id,
-                p.Name,
-                p.Price))
-            .FirstOrDefaultAsync();
+        var product = await _productService.GetProductAsync(id);
 
         if (product is null)
         {
@@ -51,22 +38,15 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateProduct(CreateProductRequest request)
+    public async Task<IActionResult> CreateProduct(
+        CreateProductRequest request)
     {
-        var product = new Product(
-        request.Name,
-        request.Price);
-        _dbContext.Products.Add(product);
-        await _dbContext.SaveChangesAsync();
-        var response = new ProductResponse(
-            product.Id,
-            product.Name,
-            product.Price);
+        var product = await _productService.CreateProductAsync(request);
 
         return CreatedAtAction(
             nameof(GetProduct),
             new { id = product.Id },
-            response);
+            product);
     }
 
     [HttpPut("{id:guid}")]
@@ -74,19 +54,14 @@ public class ProductsController : ControllerBase
         Guid id,
         UpdateProductRequest request)
     {
-        var product = await _dbContext.Products
-            .FirstOrDefaultAsync(p => p.Id == id);
+        var updated = await _productService.UpdateProductAsync(
+            id,
+            request);
 
-        if (product is null)
+        if (!updated)
         {
             return NotFound();
         }
-
-        product.Update(
-            request.Name,
-            request.Price);
-
-        await _dbContext.SaveChangesAsync();
 
         return NoContent();
     }
@@ -94,15 +69,13 @@ public class ProductsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteProduct(Guid id)
     {
-        var product = await _dbContext.Products.FirstOrDefaultAsync(p => p.Id == id);
-        if (product is null)
+        var deleted = await _productService.DeleteProductAsync(id);
+
+        if (!deleted)
         {
             return NotFound();
         }
-        _dbContext.Products.Remove(product);
-        await _dbContext.SaveChangesAsync();
+
         return NoContent();
     }
-
-
 }

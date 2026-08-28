@@ -1,0 +1,21 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace ShopFlow.Api.Persistence.Configurations;
+
+public sealed class ProductConfiguration
+    : IEntityTypeConfiguration<Product>
+{
+    public void Configure(EntityTypeBuilder<Product> builder)
+    {
+        builder.HasKey(product => product.Id);
+
+        builder.Property(product => product.Name)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        builder.Property(product => product.Price)
+            .HasPrecision(18, 2)
+            .IsRequired();
+    }
+}
