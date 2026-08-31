@@ -3,4 +3,5 @@
     <File Path="docker-compose.yml" />
   </Folder>
   <Project Path="ShopFlow.Api/ShopFlow.Api.csproj" />
+  <Project Path="ShopFlow.UnitTests/ShopFlow.UnitTests.csproj" />
 </Solution>
